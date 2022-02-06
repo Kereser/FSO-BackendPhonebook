@@ -1,7 +1,9 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
 const morgan = require('morgan')
 const cors = require('cors')
+const Person = require('./models/person')
 
 app.use(express.static('build'))
 app.use(express.json())
@@ -14,15 +16,15 @@ morgan.token('body', (req) => {
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
 
-const requestLogger = (request, response, next) => {
-  console.log('Method:', request.method)
-  console.log('Path:  ', request.path)
-  console.log('Body:  ', request.body)
-  console.log('---')
-  next()
-}
+// const requestLogger = (request, response, next) => {
+//   console.log('Method:', request.method)
+//   console.log('Path:  ', request.path)
+//   console.log('Body:  ', request.body)
+//   console.log('---')
+//   next()
+// }
 
-app.use(requestLogger)
+// app.use(requestLogger)
 
 let persons = [
   {
@@ -48,7 +50,11 @@ let persons = [
 ]
 
 app.get('/api/persons', (req, res) => {
-  res.json(persons)
+  Person
+    .find({})
+    .then(returnedPeople => {
+      res.json(returnedPeople)
+    })
 })
 
 app.get('/info', (req, res) => {
@@ -60,20 +66,12 @@ app.get('/info', (req, res) => {
 })
 
 app.get('/api/persons/:id', (req, res) => {
-  const id = Number(req.params.id)
-  const person = persons.find(person => person.id === id)
-
-  if (person) {
-    res.json(person)
-  }
-  else {
-    return res.status(404).end()
-  }
+  Person
+    .findById(req.params.id)
+    .then(returnedPerson => {
+      res.json(returnedPerson)
+    })
 })
-
-const createId = () => {
-  return Math.floor(Math.random() * 1000)
-}
 
 app.post('/api/persons', (req, res) => {
   const body = req.body
@@ -83,20 +81,17 @@ app.post('/api/persons', (req, res) => {
       error: 'You have to enter both name and number'
     })
   }
-  else if (persons.find(person => person.name === body.name)) {
-    return res.json({
-      error: 'Name must be unique'
-    })
-  }
   else {
-    const person = {
-      id: createId(),
+    const person = new Person({
       name: body.name,
       number: body.number
-    }
+    })
 
-    persons = persons.concat(person)
-    res.json(person)
+    person
+      .save()
+      .then(createdPerson => {
+        res.json(createdPerson)
+      })
   }
 })
 
