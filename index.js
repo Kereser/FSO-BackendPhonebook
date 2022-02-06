@@ -15,40 +15,20 @@ morgan.token('body', (req) => {
 
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
+//Middlewear error handler 
 
-// const requestLogger = (request, response, next) => {
-//   console.log('Method:', request.method)
-//   console.log('Path:  ', request.path)
-//   console.log('Body:  ', request.body)
-//   console.log('---')
-//   next()
-// }
+const errorHandler = (err, req, res, next) => {
+  console.log(err.message)
 
-// app.use(requestLogger)
-
-let persons = [
-  {
-    id: 1,
-    name: 'Arto Hellas',
-    number: '040-6587459'
-  },
-  {
-    id: 2,
-    name: 'Ada Lovelace',
-    number: '040-6587459'
-  },
-  {
-    id: 3,
-    name: 'Karinchi',
-    number: '040-5687459'
-  },
-  {
-    id: 4,
-    name: 'Poshickis',
-    number: '040-7458963'
+  if (err.name === 'CastError') {
+    return res.status(400).send({ error: 'malformatted id' })
   }
-]
 
+  next(err)
+}
+
+
+//Routes
 app.get('/api/persons', (req, res) => {
   Person
     .find({})
@@ -59,21 +39,26 @@ app.get('/api/persons', (req, res) => {
 
 app.get('/info', (req, res) => {
   const date = new Date()
-  res.send(`
-    <h2>Phonebook has info for ${persons.length} people</h2>
-    <p>${date}</p>  
-  `)
+  Person
+    .find({})
+    .then(returnedPeople => {
+      res.send(`
+        <h2>Phonebook has info for ${returnedPeople.length} people</h2>
+        <p>${date}</p>  
+      `)
+    })
 })
 
-app.get('/api/persons/:id', (req, res) => {
+app.get('/api/persons/:id', (req, res, next) => {
   Person
     .findById(req.params.id)
     .then(returnedPerson => {
       res.json(returnedPerson)
     })
+    .catch(err => next(err))
 })
 
-app.post('/api/persons', (req, res) => {
+app.post('/api/persons', (req, res, next) => {
   const body = req.body
 
   if (!body.name || !body.number) {
@@ -92,16 +77,33 @@ app.post('/api/persons', (req, res) => {
       .then(createdPerson => {
         res.json(createdPerson)
       })
+      .catch(err => next(err))
   }
 })
 
-app.delete('/api/persons/:id', (req, res) => {
-  const id = Number(req.params.id)
-  persons = persons.filter(person => {
-    return person.id !== id
-  })
+app.put('/api/persons/:id', (req, res, next) => {
+  const body = req.body
 
-  res.status(204).end()
+  const person = {
+    name: body.name,
+    number: body.number
+  }
+
+  Person
+    .findByIdAndUpdate(req.params.id, person, { new: true })
+    .then(updatedPerson => {
+      res.json(updatedPerson)
+    })
+    .catch(err => next(err))
+})
+
+app.delete('/api/persons/:id', (req, res, next) => {
+  Person
+    .findByIdAndRemove(req.params.id)
+    .then(result => {
+      res.status(204).end()
+    })
+    .catch(err => next(err))
 })
 
 const unknownEndpoint = (request, response) => {
@@ -109,6 +111,8 @@ const unknownEndpoint = (request, response) => {
 }
 
 app.use(unknownEndpoint)
+
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
