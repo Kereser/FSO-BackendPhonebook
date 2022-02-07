@@ -86,7 +86,7 @@ app.put('/api/persons/:id', (req, res, next) => {
   }
 
   Person
-    .findByIdAndUpdate(req.params.id, person, { runValidators: true, new: true, context: 'query'})
+    .findByIdAndUpdate(req.params.id, person, { runValidators: true, new: true, context: 'query' })
     .then(updatedPerson => {
       res.json(updatedPerson)
     })
@@ -96,7 +96,7 @@ app.put('/api/persons/:id', (req, res, next) => {
 app.delete('/api/persons/:id', (req, res, next) => {
   Person
     .findByIdAndRemove(req.params.id)
-    .then(result => {
+    .then(() => {
       res.status(204).end()
     })
     .catch(err => next(err))
@@ -112,5 +112,5 @@ app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
-  console.log(`server running on port: ${PORT} `);
+  console.log(`server running on port: ${PORT} `)
 })
