@@ -15,13 +15,16 @@ morgan.token('body', (req) => {
 
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
-//Middlewear error handler 
 
+//Middlewear error handler 
 const errorHandler = (err, req, res, next) => {
   console.log(err.message)
 
   if (err.name === 'CastError') {
     return res.status(400).send({ error: 'malformatted id' })
+  } else if (err.name === 'ValidationError') {
+    console.log(err.message)
+    return res.status(400).send({ error: err.message })
   }
 
   next(err)
@@ -61,24 +64,17 @@ app.get('/api/persons/:id', (req, res, next) => {
 app.post('/api/persons', (req, res, next) => {
   const body = req.body
 
-  if (!body.name || !body.number) {
-    return res.status(404).json({
-      error: 'You have to enter both name and number'
-    })
-  }
-  else {
-    const person = new Person({
-      name: body.name,
-      number: body.number
-    })
+  const person = new Person({
+    name: body.name,
+    number: body.number
+  })
 
-    person
-      .save()
-      .then(createdPerson => {
-        res.json(createdPerson)
-      })
-      .catch(err => next(err))
-  }
+  person
+    .save()
+    .then(createdPerson => {
+      res.json(createdPerson)
+    })
+    .catch(err => next(err))
 })
 
 app.put('/api/persons/:id', (req, res, next) => {
@@ -90,7 +86,7 @@ app.put('/api/persons/:id', (req, res, next) => {
   }
 
   Person
-    .findByIdAndUpdate(req.params.id, person, { new: true })
+    .findByIdAndUpdate(req.params.id, person, { runValidators: true, new: true, context: 'query'})
     .then(updatedPerson => {
       res.json(updatedPerson)
     })
